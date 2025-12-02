@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card mb-3 border-0 shadow-sm">
+    <div class="card-body p-3 d-flex align-items-center gap-3">
+        <a href="/new" class="btn btn-outline-danger btn-bg ">+ New</a>
+        <button class="btn btn-outline-danger btn-bg">Refresh</button>
+        <button class="btn btn-outline-danger btn-bg">All Records</button>
+        <button class="btn btn-outline-danger btn-bg">My Records</button>
+        <input type="text" class="form-control form-control-sm ms-auto border-danger" placeholder="Search"
+            style="max-width: 250px;">
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>SNO</th>
+                        <th>Document Number</th>
+                        <th>Revision</th>
+                        <th>Title</th>
+                        <th>Project</th>
+                        <th>Base Line Date</th>
+                        <th>IDR Req?</th>
+                        <th>SignOff Req?</th>
+                        <th>Current Status</th>
+                        <th class="text-center">Originator</th>
+                        <th class="text-center">Reviewer</th>
+                        <th class="text-center">Signoff</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in docs %}
+                    <tr>
+                        <td class="fw-bold">{{ doc.request_id }}</td>
+                        <td>{{ doc.doc_number }}</td>
+                        <td>{{ doc.revision_number }}</td>
+                        <td>{{ doc.title }}</td>
+                        <td>{{ doc.project_no }}</td>
+                        <td>{{ doc.baseline_date }}</td>
+                        <td>{{ doc.is_idr_required }}</td>
+                        <td>{{ doc.is_signoff_required }}</td>
+                        <td><span class="badge bg-warning text-dark border border-warning">{{ doc.current_status
+                                }}</span></td>
+
+                        <td class="text-center">
+                            {% if doc.current_stage_code > 1 %}<span class="badge bg-success">Completed</span>
+                            {% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if doc.current_stage_code > 2 %}<span class="badge bg-success">Completed</span>
+                            {% elif doc.current_stage_code == 2 %}<span class="badge bg-success">Active</span>
+                            {% else %}<span class="badge bg-secondary">Upcoming</span>{% endif %}
+                        </td>
+                        <td class="text-center"><span class="badge bg-secondary">Upcoming</span></td>
+
+                        <td>
+                            <button class="btn btn-sm btn-link text-decoration-none fw-bold" hx-get="/doc/{{ doc.id }}"
+                                hx-target="#modal-content" data-bs-toggle="modal" data-bs-target="#mainModal">
+                                Open
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

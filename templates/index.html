@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header bg-white fw-bold">My Records</div>
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Request ID</th>
+                    <th>Project</th>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in docs %}
+                <tr>
+                    <td><a href="/doc/{{doc.id}}" class="fw-bold text-decoration-none">{{ doc.request_id }}</a></td>
+                    <td>{{ doc.project_name }}</td>
+                    <td>{{ doc.title }}</td>
+                    <td><span class="badge bg-secondary">{{ doc.status }}</span></td>
+                    <td><a href="/doc/{{doc.id}}" class="btn btn-sm btn-outline-primary">Edit</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,4 @@
+(pymysql.err.DataError) (1406, "Data too long for column 'project_number' at row 1")
+[SQL: INSERT INTO projects (project_number, project_name, region, description, status) VALUES (%(project_number)s, %(project_name)s, %(region)s, %(description)s, %(status)s)]
+[parameters: {'project_number': 'R04642 - T04115 - Large EDI MK5/MK9 Electrical Preliminary design - ANSI version', 'project_name': 'Large EDI MK5/MK9 Electrical Preliminary design - ANSI version', 'region': 'PRODUCTS', 'description': '', 'status': 'Active'}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)

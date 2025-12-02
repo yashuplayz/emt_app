@@ -1,0 +1,847 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="text-danger fw-bold">{{ doc.request_id if doc else "New Request" }}</h3>
+    {% if mode == 'edit' and (current_user == doc.doc_owner or current_user ==
+    doc.originator) and "Completed" not in
+    doc.current_status %}
+    <a href="/delete/{{doc.id}}" class="btn btn-outline-danger" onclick="return confirm('Mark as INACTIVE?')">Delete
+        Request</a>
+    {% endif %}
+</div>
+<div class="accordion" id="mainAccordion">
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#c1">Document
+                Details</button>
+        </h2>
+        <div id="c1" class="accordion-collapse collapse show">
+            <div class="accordion-body">
+                <form action="/new" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Project No</label>
+                            {% if mode == 'new' %}
+                            <div class="custom-dropdown" id="projectDropdown">
+                                <input type="text" class="form-control" id="projectSearch"
+                                    placeholder="Search Project..." autocomplete="off">
+                                <input type="hidden" name="project_no" id="projectValue" required>
+                                <div class="dropdown-list" id="projectList">
+                                    {% for p in projects %}
+                                    <div class="dropdown-item" data-value="{{ p.project_number }}">
+                                        <strong>{{ p.project_number }}</strong> - {{
+                                        p.project_name }}
+                                    </div>
+                                    {% endfor %}
+                                    <div class="dropdown-item no-results" style="display: none;">No projects found</div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <input type="text" class="form-control" value="{{ doc.project_number }}" disabled>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Document Title</label>
+                            <input type="text" name="title" class="form-control" value="{{ doc.title if doc else '' }}"
+                                {{ 'disabled' if mode=='edit' }} required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Document Number</label>
+                            <input type="text" name="doc_no" class="form-control"
+                                value="{{ doc.doc_number if doc else '' }}" {{ 'disabled' if mode=='edit' }} required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Revision Number</label>
+                            <input type="text" name="rev_no" class="form-control"
+                                value="{{ doc.revision_number if doc else '' }}" {{ 'disabled' if mode=='edit' }}
+                                required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Discipline</label>
+                            <select name="discipline" class="form-select" {{ 'disabled' if mode=='edit' }}>
+                                <option>Process</option>
+                                <option>Mechanical</option>
+                                <option>Electrical</option>
+                                <option>Instrumentation</option>
+                                <option>Civil</option>
+                                <option>Structural</option>
+                                <option>Piping</option>
+                                <option>Safety</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Baseline Date</label>
+                            <input type="date" name="baseline_date" class="form-control"
+                                value="{{ doc.baseline_date if doc else '' }}" {{ 'disabled' if mode=='edit' }}
+                                required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Est. Hours</label>
+                            <input type="number" step="0.1" name="est_hours" class="form-control"
+                                value="{{ doc.estimation_hours if doc else '' }}" {{ 'disabled' if mode=='edit' }}>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">DRM Category</label>
+                            <select name="drm_cat" class="form-select" {{ 'disabled' if mode=='edit' }}>
+                                <option>Cat 1</option>
+                                <option>Cat 2</option>
+                                <option>Cat 3</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Doc Owner</label>
+                            <div class="custom-dropdown" id="docOwnerDropdown">
+                                <input type="text" class="form-control" id="docOwnerSearch"
+                                    placeholder="Search Employee..." autocomplete="off" {{ 'disabled' if mode=='edit'
+                                    }}>
+                                <input type="hidden" name="doc_owner" id="docOwnerInput"
+                                    value="{{ doc.doc_owner if doc else '' }}">
+                                <div class="dropdown-list" id="docOwnerList" style="display: none;">
+                                    {% for e in employees %}
+                                    <div class="dropdown-item" data-value="{{ e.email }}" onclick="selectEmployee('docOwner', '{{ e.email }}', '{{ e.name }}')">
+                                        {{ e.name }} ({{ e.email }})
+                                    </div>
+                                    {% endfor %}
+                                    <div class="dropdown-item no-results" style="display: none;">No employees found
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Originator</label>
+                            <div class="custom-dropdown" id="originatorDropdown">
+                                <input type="text" class="form-control" id="originatorSearch"
+                                    placeholder="Search Employee..." autocomplete="off" {{ 'disabled' if mode=='edit'
+                                    }}>
+                                <input type="hidden" name="originator" id="originatorInput"
+                                    value="{{ doc.originator if doc else '' }}">
+                                <div class="dropdown-list" id="originatorList" style="display: none;">
+                                    {% for e in employees %}
+                                    <div class="dropdown-item" data-value="{{ e.email }}" onclick="selectEmployee('originator', '{{ e.email }}', '{{ e.name }}')">
+                                        {{ e.name }} ({{ e.email }})
+                                    </div>
+                                    {% endfor %}
+                                    <div class="dropdown-item no-results" style="display: none;">No employees found
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Reviewer</label>
+                            <div class="custom-dropdown" id="reviewerDropdown">
+                                <input type="text" class="form-control" id="reviewerSearch"
+                                    placeholder="Search Employee..." autocomplete="off" {{ 'disabled' if mode=='edit'
+                                    }}>
+                                <input type="hidden" name="reviewer" id="reviewerInput"
+                                    value="{{ doc.reviewer if doc else '' }}">
+                                <div class="dropdown-list" id="reviewerList" style="display: none;">
+                                    {% for e in employees %}
+                                    <div class="dropdown-item" data-value="{{ e.email }}" onclick="selectEmployee('reviewer', '{{ e.email }}', '{{ e.name }}')">
+                                        {{ e.name }} ({{ e.email }})
+                                    </div>
+                                    {% endfor %}
+                                    <div class="dropdown-item no-results" style="display: none;">No employees found
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">IDR Required?</label>
+                            <select name="idr_req" id="idrReqSelect" class="form-select" {{ 'disabled' if mode=='edit'
+                                }}>
+                                <option value="No" {{ 'selected' if doc and doc.is_idr_required=='No' }}>No</option>
+                                <option value="Yes" {{ 'selected' if doc and doc.is_idr_required=='Yes' }}>Yes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">SignOff Required?</label>
+                            <select name="signoff_req" id="signoffReqSelect" class="form-select" {{ 'disabled' if
+                                mode=='edit' }}>
+                                <option value="No" {{ 'selected' if doc and doc.is_signoff_required=='No' }}>No</option>
+                                <option value="Yes" {{ 'selected' if doc and doc.is_signoff_required=='Yes' }}>Yes
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-12" id="idrReviewersContainer" style="display: none;">
+                            <label class="form-label">IDR Reviewers</label>
+                            <div class="custom-dropdown">
+                                <input type="text" class="form-control" id="idrSearch" placeholder="Search Employee..."
+                                    autocomplete="off">
+                                <input type="hidden" name="idr_reviewers" id="idrReviewersInput">
+                                <div class="dropdown-list" id="idrList" style="display: none;">
+                                    {% for e in employees %}
+                                    <div class="dropdown-item"
+                                        onclick="addIdrReviewer('{{ e.email }}', '{{ e.name }}')">
+                                        {{ e.name }} ({{ e.email }})
+                                    </div>
+                                    {% endfor %}
+                                    <div class="dropdown-item no-results" style="display: none;">No employees found
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="selectedIdrReviewers" class="mt-2"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">SignOff Engineer</label>
+                            <div class="custom-dropdown" id="signoffDropdown">
+                                <input type="text" class="form-control" id="signoffSearch"
+                                    placeholder="Search Employee..." autocomplete="off" {{ 'disabled' if mode=='edit'
+                                    }}>
+                                <input type="hidden" name="signoff_eng" id="signoffInput"
+                                    value="{{ doc.signoff_eng if doc else '' }}">
+                                <div class="dropdown-list" id="signoffList" style="display: none;">
+                                    {% for e in employees %}
+                                    <div class="dropdown-item" data-value="{{ e.email }}" onclick="selectSignoff('{{ e.email }}', '{{ e.name }}')">
+                                        {{ e.name }} ({{ e.email }})
+                                    </div>
+                                    {% endfor %}
+                                    <div class="dropdown-item no-results" style="display: none;">No employees found
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% if mode == 'new' %}
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-primary">Create
+                                Request</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% if mode == 'edit' %}
+    {% if doc.current_stage_code >= 1 %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button {{ 'collapsed' if doc.current_stage_code != 1 }}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#oc1">
+                Originator Cycle 1
+                {% if doc.current_stage_code > 1 %} <span class="badge bg-success ms-2">Submitted</span> {% endif %}
+            </button>
+        </h2>
+        <div id="oc1" class="accordion-collapse collapse {{ 'show' if doc.current_stage_code == 1 }}">
+            <div class="accordion-body">
+                <form action="/submit_cycle/{{doc.id}}/OriginatorCycle_1" method="POST">
+                    {% set data = cycles['OriginatorCycle_1'] if 'OriginatorCycle_1' in
+                    cycles else None %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Actual Hours</label>
+                            <input type="number" step="0.1" name="actual_hours" class="form-control"
+                                value="{{ data.actual_hours if data }}" {{ 'disabled' if data }}>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Transmittal Date</label>
+                            <input type="date" name="transmittal_date" class="form-control"
+                                value="{{ data.transmittal_date if data }}" {{ 'disabled' if data }}>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Ref Link</label>
+                            <input type="text" name="ref_link" class="form-control" value="{{ data.ref_link if data }}"
+                                {{ 'disabled' if data }}>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Description / Comments</label>
+                            <textarea name="description" class="form-control" rows="3" {{ 'disabled' if data
+                                }}>{{ data.description if data }}</textarea>
+                        </div>
+                    </div>
+                    {% if not data %}
+                    <div class="mt-3 text-end"><button type="submit" class="btn btn-danger">Submit</button></div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if doc.current_stage_code >= 2 %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button {{ 'collapsed' if doc.current_stage_code != 2 }}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#rc1">
+                Reviewer Cycle 1
+                {% if doc.current_stage_code > 2 %} <span class="badge bg-success ms-2">Submitted</span> {% endif %}
+            </button>
+        </h2>
+        <div id="rc1" class="accordion-collapse collapse {{ 'show' if doc.current_stage_code == 2 }}">
+            <div class="accordion-body">
+                <form action="/submit_cycle/{{doc.id}}/ReviewerCycle_1" method="POST">
+                    {% set data = cycles['ReviewerCycle_1'] if 'ReviewerCycle_1' in
+                    cycles else None %}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Reviewer Action</label>
+                            <select name="action" class="form-select" {{ 'disabled' if data }}>
+                                <option>Accepted</option>
+                                <option>SendBack</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Review Hours</label>
+                            <input type="number" step="0.1" name="review_hours" class="form-control"
+                                value="{{ data.review_hours if data }}" {{ 'disabled' if data }}>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-primary">Major
+                                Issues</label>
+                            <div class="input-group mb-2"><span class="input-group-text">Tool</span><input type="number"
+                                    name="major_tool" class="form-control" value="{{ data.major_tool if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                            <div class="input-group mb-2"><span class="input-group-text">Tech</span><input type="number"
+                                    name="major_tech" class="form-control" value="{{ data.major_tech if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                            <div class="input-group mb-2"><span class="input-group-text">Std</span><input type="number"
+                                    name="major_std" class="form-control" value="{{ data.major_std if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-primary">Minor
+                                Issues</label>
+                            <div class="input-group mb-2"><span class="input-group-text">Typo</span><input type="number"
+                                    name="minor_typo" class="form-control" value="{{ data.minor_typo if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Reviewer Comments</label>
+                            <textarea name="description" class="form-control" rows="3" {{ 'disabled' if data
+                                }}>{{ data.description if data }}</textarea>
+                        </div>
+                    </div>
+                    {% if not data %}
+                    <div class="mt-3 text-end"><button type="submit" class="btn btn-primary">Submit
+                            Review</button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if doc.current_stage_code >= 3 %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button {{ 'collapsed' if doc.current_stage_code != 3 }}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#oc2">
+                Originator Cycle 2
+                {% if doc.current_stage_code > 3 %} <span class="badge bg-success ms-2">Submitted</span> {% endif %}
+            </button>
+        </h2>
+        <div id="oc2" class="accordion-collapse collapse {{ 'show' if doc.current_stage_code == 3 }}">
+            <div class="accordion-body">
+                <form action="/submit_cycle/{{doc.id}}/OriginatorCycle_2" method="POST">
+                    {% set data = cycles['OriginatorCycle_2'] if 'OriginatorCycle_2' in
+                    cycles else None %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Actual Hours</label>
+                            <input type="number" step="0.1" name="actual_hours" class="form-control"
+                                value="{{ data.actual_hours if data }}" {{ 'disabled' if data }}>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Transmittal Date</label>
+                            <input type="date" name="transmittal_date" class="form-control"
+                                value="{{ data.transmittal_date if data }}" {{ 'disabled' if data }}>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Ref Link</label>
+                            <input type="text" name="ref_link" class="form-control" value="{{ data.ref_link if data }}"
+                                {{ 'disabled' if data }}>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Description / Comments</label>
+                            <textarea name="description" class="form-control" rows="3" {{ 'disabled' if data
+                                }}>{{ data.description if data }}</textarea>
+                        </div>
+                    </div>
+                    {% if not data %}
+                    <div class="mt-3 text-end"><button type="submit" class="btn btn-danger">Submit</button></div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if doc.current_stage_code >= 4 %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button {{ 'collapsed' if doc.current_stage_code != 4 }}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#rc2">
+                Reviewer Cycle 2
+                {% if doc.current_stage_code > 4 %} <span class="badge bg-success ms-2">Submitted</span> {% endif %}
+            </button>
+        </h2>
+        <div id="rc2" class="accordion-collapse collapse {{ 'show' if doc.current_stage_code == 4 }}">
+            <div class="accordion-body">
+                <form action="/submit_cycle/{{doc.id}}/ReviewerCycle_2" method="POST">
+                    {% set data = cycles['ReviewerCycle_2'] if 'ReviewerCycle_2' in
+                    cycles else None %}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Reviewer Action</label>
+                            <select name="action" class="form-select" {{ 'disabled' if data }}>
+                                <option>Accepted</option>
+                                <option>SendBack</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Review Hours</label>
+                            <input type="number" step="0.1" name="review_hours" class="form-control"
+                                value="{{ data.review_hours if data }}" {{ 'disabled' if data }}>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-primary">Major
+                                Issues</label>
+                            <div class="input-group mb-2"><span class="input-group-text">Tool</span><input type="number"
+                                    name="major_tool" class="form-control" value="{{ data.major_tool if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                            <div class="input-group mb-2"><span class="input-group-text">Tech</span><input type="number"
+                                    name="major_tech" class="form-control" value="{{ data.major_tech if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                            <div class="input-group mb-2"><span class="input-group-text">Std</span><input type="number"
+                                    name="major_std" class="form-control" value="{{ data.major_std if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-primary">Minor
+                                Issues</label>
+                            <div class="input-group mb-2"><span class="input-group-text">Typo</span><input type="number"
+                                    name="minor_typo" class="form-control" value="{{ data.minor_typo if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Reviewer Comments</label>
+                            <textarea name="description" class="form-control" rows="3" {{ 'disabled' if data
+                                }}>{{ data.description if data }}</textarea>
+                        </div>
+                    </div>
+                    {% if not data %}
+                    <div class="mt-3 text-end"><button type="submit" class="btn btn-primary">Submit Review</button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if doc.current_stage_code >= 5 %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button {{ 'collapsed' if doc.current_stage_code != 5 }}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#oc3">
+                Originator Cycle 3
+                {% if doc.current_stage_code > 5 %} <span class="badge bg-success ms-2">Submitted</span> {% endif %}
+            </button>
+        </h2>
+        <div id="oc3" class="accordion-collapse collapse {{ 'show' if doc.current_stage_code == 5 }}">
+            <div class="accordion-body">
+                <form action="/submit_cycle/{{doc.id}}/OriginatorCycle_3" method="POST">
+                    {% set data = cycles['OriginatorCycle_3'] if 'OriginatorCycle_3' in
+                    cycles else None %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Actual Hours</label>
+                            <input type="number" step="0.1" name="actual_hours" class="form-control"
+                                value="{{ data.actual_hours if data }}" {{ 'disabled' if data }}>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Transmittal Date</label>
+                            <input type="date" name="transmittal_date" class="form-control"
+                                value="{{ data.transmittal_date if data }}" {{ 'disabled' if data }}>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Ref Link</label>
+                            <input type="text" name="ref_link" class="form-control" value="{{ data.ref_link if data }}"
+                                {{ 'disabled' if data }}>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Description / Comments</label>
+                            <textarea name="description" class="form-control" rows="3" {{ 'disabled' if data
+                                }}>{{ data.description if data }}</textarea>
+                        </div>
+                    </div>
+                    {% if not data %}
+                    <div class="mt-3 text-end"><button type="submit" class="btn btn-danger">Submit</button></div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if doc.current_stage_code >= 6 %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button {{ 'collapsed' if doc.current_stage_code != 6 }}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#rc3">
+                Reviewer Cycle 3
+                {% if doc.current_stage_code > 6 %} <span class="badge bg-success ms-2">Submitted</span> {% endif %}
+            </button>
+        </h2>
+        <div id="rc3" class="accordion-collapse collapse {{ 'show' if doc.current_stage_code == 6 }}">
+            <div class="accordion-body">
+                <form action="/submit_cycle/{{doc.id}}/ReviewerCycle_3" method="POST">
+                    {% set data = cycles['ReviewerCycle_3'] if 'ReviewerCycle_3' in
+                    cycles else None %}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Reviewer Action</label>
+                            <select name="action" class="form-select" {{ 'disabled' if data }}>
+                                <option>Accepted</option>
+                                <option>SendBack</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Review Hours</label>
+                            <input type="number" step="0.1" name="review_hours" class="form-control"
+                                value="{{ data.review_hours if data }}" {{ 'disabled' if data }}>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-primary">Major
+                                Issues</label>
+                            <div class="input-group mb-2"><span class="input-group-text">Tool</span><input type="number"
+                                    name="major_tool" class="form-control" value="{{ data.major_tool if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                            <div class="input-group mb-2"><span class="input-group-text">Tech</span><input type="number"
+                                    name="major_tech" class="form-control" value="{{ data.major_tech if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                            <div class="input-group mb-2"><span class="input-group-text">Std</span><input type="number"
+                                    name="major_std" class="form-control" value="{{ data.major_std if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-primary">Minor
+                                Issues</label>
+                            <div class="input-group mb-2"><span class="input-group-text">Typo</span><input type="number"
+                                    name="minor_typo" class="form-control" value="{{ data.minor_typo if data else 0 }}"
+                                    {{ 'disabled' if data }}></div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Reviewer Comments</label>
+                            <textarea name="description" class="form-control" rows="3" {{ 'disabled' if data
+                                }}>{{ data.description if data }}</textarea>
+                        </div>
+                    </div>
+                    {% if not data %}
+                    <div class="mt-3 text-end"><button type="submit" class="btn btn-primary">Submit Review</button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if doc.current_stage_code >= 7 %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button {{ 'collapsed' if doc.current_stage_code != 7 }}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#idr">
+                IDR Review
+                {% if doc.current_stage_code > 7 %} <span class="badge bg-success ms-2">Submitted</span> {% endif %}
+            </button>
+        </h2>
+        <div id="idr" class="accordion-collapse collapse {{ 'show' if doc.current_stage_code == 7 }}">
+            <div class="accordion-body">
+                <form action="/submit_cycle/{{doc.id}}/IDR_Review" method="POST">
+                    {% set data = cycles['IDR_Review'] if 'IDR_Review' in cycles else
+                    None %}
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">IDR Comments</label>
+                            <textarea name="description" class="form-control" rows="3" {{ 'disabled' if data
+                                }}>{{ data.description if data }}</textarea>
+                        </div>
+                        <input type="hidden" name="action" value="Accepted">
+                    </div>
+                    {% if not data %}
+                    <div class="mt-3 text-end"><button type="submit" class="btn btn-primary">Complete IDR</button></div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if doc.current_stage_code >= 8 %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button {{ 'collapsed' if doc.current_stage_code != 8 }}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#signoff">
+                SignOff Engineer
+                {% if doc.current_stage_code > 8 %} <span class="badge bg-success ms-2">Submitted</span> {% endif %}
+            </button>
+        </h2>
+        <div id="signoff" class="accordion-collapse collapse {{ 'show' if doc.current_stage_code == 8 }}">
+            <div class="accordion-body">
+                <form action="/submit_cycle/{{doc.id}}/SignOffEngineer" method="POST">
+                    {% set data = cycles['SignOffEngineer'] if 'SignOffEngineer' in
+                    cycles else None %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">SignOff Decision</label>
+                            <select name="signoff_decision" class="form-select" {{ 'disabled' if data }}>
+                                <option>Approved</option>
+                                <option>Hold</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">SignOff Hours</label>
+                            <input type="number" step="0.1" name="signoff_hours" class="form-control"
+                                value="{{ data.signoff_hours if data }}" {{ 'disabled' if data }} required>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Comments</label>
+                            <textarea name="signoff_comments" class="form-control" rows="3" {{ 'disabled' if data }}
+                                required>{{ data.signoff_comments if data }}</textarea>
+                        </div>
+                    </div>
+                    {% if not data %}
+                    <div class="mt-3 text-end"><button type="submit" class="btn btn-success">Complete SignOff</button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.querySelector('form[action="/new"]');
+        const idrReqSelect = document.getElementById('idrReqSelect');
+        const idrContainer = document.getElementById('idrReviewersContainer');
+        const signoffReqSelect = document.getElementById('signoffReqSelect');
+        const reviewerSearch = document.getElementById('reviewerSearch');
+        const reviewerInput = document.getElementById('reviewerInput');
+        
+        // IDR Logic
+        function toggleIdr() {
+            const reviewerList = document.getElementById('reviewerList');
+            if (idrReqSelect && idrReqSelect.value === 'Yes') {
+                idrContainer.style.display = 'block';
+                // Disable Reviewer if IDR is Yes
+                if (reviewerSearch) {
+                    reviewerSearch.value = "";
+                    if (reviewerInput) reviewerInput.value = "";
+                    reviewerSearch.disabled = true;
+                    reviewerSearch.removeAttribute('required');
+                    if (reviewerList) reviewerList.style.display = 'none';
+                }
+            } else {
+                idrContainer.style.display = 'none';
+                // Enable Reviewer if IDR is No
+                if (reviewerSearch) {
+                    reviewerSearch.disabled = false;
+                    reviewerSearch.setAttribute('required', 'required');
+                }
+            }
+        }
+        if (idrReqSelect) {
+            idrReqSelect.addEventListener('change', toggleIdr);
+            toggleIdr(); // Init
+        }
+
+        // SignOff Logic
+        function toggleSignoff() {
+            const signoffInput = document.querySelector('input[name="signoff_eng"]');
+            const signoffSearch = signoffInput ? signoffInput.closest('.custom-dropdown').querySelector('input[type="text"]') : null;
+            if (signoffReqSelect.value === 'Yes') {
+                if (signoffSearch) signoffSearch.disabled = false;
+            } else {
+                if (signoffSearch) {
+                    signoffSearch.disabled = true;
+                    signoffSearch.value = ''; // Clear visual
+                }
+                if (signoffInput) {
+                    signoffInput.value = ''; // Clear actual
+                }
+            }
+        }
+        if (signoffReqSelect) {
+            signoffReqSelect.addEventListener('change', toggleSignoff);
+            toggleSignoff(); // Init
+        }
+
+        // IDR Multi-Select Logic
+        const idrSearch = document.getElementById('idrSearch');
+        const idrList = document.getElementById('idrList');
+        const idrInput = document.getElementById('idrReviewersInput');
+        const selectedIdrContainer = document.getElementById('selectedIdrReviewers');
+        let selectedIdrEmails = [];
+
+        if (idrSearch) {
+            idrSearch.addEventListener('focus', () => idrList.style.display = 'block');
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('#idrReviewersContainer')) {
+                    idrList.style.display = 'none';
+                }
+            });
+            idrSearch.addEventListener('input', function () {
+                const filter = idrSearch.value.toLowerCase();
+                const items = idrList.querySelectorAll('.dropdown-item:not(.no-results)');
+                let hasVisible = false;
+                items.forEach(item => {
+                    const text = item.innerText.toLowerCase();
+                    if (text.includes(filter)) {
+                        item.style.display = 'block';
+                        hasVisible = true;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                idrList.querySelector('.no-results').style.display = hasVisible ? 'none' : 'block';
+            });
+        }
+
+        window.addIdrReviewer = function (email, name) {
+            if (!selectedIdrEmails.includes(email)) {
+                selectedIdrEmails.push(email);
+                updateIdrDisplay();
+                updateIdrInput();
+            }
+            idrSearch.value = '';
+            idrList.style.display = 'none';
+        };
+
+        window.removeIdrReviewer = function (email) {
+            selectedIdrEmails = selectedIdrEmails.filter(e => e !== email);
+            updateIdrDisplay();
+            updateIdrInput();
+        };
+
+        function updateIdrDisplay() {
+            selectedIdrContainer.innerHTML = '';
+            selectedIdrEmails.forEach(email => {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-secondary me-1 mb-1';
+                badge.innerHTML = `${email} <i class="fas fa-times ms-1" style="cursor:pointer;" onclick="removeIdrReviewer('${email}')"></i>`;
+                selectedIdrContainer.appendChild(badge);
+            });
+        }
+
+        function updateIdrInput() {
+            idrInput.value = selectedIdrEmails.join(',');
+        }
+
+        // SignOff Dropdown Logic
+        const signoffSearch = document.getElementById('signoffSearch');
+        const signoffList = document.getElementById('signoffList');
+        const signoffInput = document.getElementById('signoffInput');
+
+        if (signoffSearch) {
+            signoffSearch.addEventListener('focus', () => signoffList.style.display = 'block');
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('#signoffDropdown')) {
+                    signoffList.style.display = 'none';
+                }
+            });
+            signoffSearch.addEventListener('input', function () {
+                const filter = signoffSearch.value.toLowerCase();
+                const items = signoffList.querySelectorAll('.dropdown-item:not(.no-results)');
+                let hasVisible = false;
+                items.forEach(item => {
+                    const text = item.innerText.toLowerCase();
+                    if (text.includes(filter)) {
+                        item.style.display = 'block';
+                        hasVisible = true;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                signoffList.querySelector('.no-results').style.display = hasVisible ? 'none' : 'block';
+            });
+        }
+
+        window.selectSignoff = function (email, name) {
+            signoffSearch.value = name;
+            signoffInput.value = email;
+            signoffList.style.display = 'none';
+        };
+
+        // Generic Employee Selection Logic
+        function setupEmployeeDropdown(type) {
+            const search = document.getElementById(type + 'Search');
+            const list = document.getElementById(type + 'List');
+            const input = document.getElementById(type + 'Input');
+
+            if (search) {
+                search.addEventListener('focus', () => {
+                    if (!search.disabled) {
+                        list.style.display = 'block';
+                    }
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (!e.target.closest('#' + type + 'Dropdown')) {
+                        list.style.display = 'none';
+                    }
+                });
+
+                search.addEventListener('input', function () {
+                    const filter = search.value.toLowerCase();
+                    const items = list.querySelectorAll('.dropdown-item:not(.no-results)');
+                    let hasVisible = false;
+                    items.forEach(item => {
+                        const text = item.innerText.toLowerCase();
+                        if (text.includes(filter)) {
+                            item.style.display = 'block';
+                            hasVisible = true;
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                    list.querySelector('.no-results').style.display = hasVisible ? 'none' : 'block';
+                });
+            }
+        }
+
+        window.selectEmployee = function (type, email, name) {
+            document.getElementById(type + 'Search').value = name;
+            document.getElementById(type + 'Input').value = email;
+            document.getElementById(type + 'List').style.display = 'none';
+        };
+
+        // Initialize dropdowns
+        setupEmployeeDropdown('docOwner');
+        setupEmployeeDropdown('originator');
+        setupEmployeeDropdown('reviewer');
+
+        // Custom Form Validation
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                if (signoffReqSelect && signoffReqSelect.disabled) return;
+                let isValid = true;
+                let errorMsg = "";
+
+                // Validate SignOff
+                if (signoffReqSelect && signoffReqSelect.value === 'Yes') {
+                    const signoffInput = document.querySelector('input[name="signoff_eng"]');
+                    if (!signoffInput || !signoffInput.value) {
+                        isValid = false;
+                        errorMsg += "SignOff Engineer is required.\n";
+                    }
+                }
+
+                // Validate IDR
+                if (idrReqSelect && idrReqSelect.value === 'Yes') {
+                    if (!idrInput || !idrInput.value) {
+                        isValid = false;
+                        errorMsg += "At least one IDR Reviewer is required.\n";
+                    }
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    alert(errorMsg);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
