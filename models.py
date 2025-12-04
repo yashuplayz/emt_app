@@ -49,6 +49,7 @@ class Document(Base):
     
     # Relationships
     cycles = relationship("CycleData", back_populates="document", cascade="all, delete-orphan")
+    idr_reviews = relationship("IDRReview", back_populates="document", cascade="all, delete-orphan")
 
 class CycleData(Base):
     __tablename__ = 'cycle_data'
@@ -82,6 +83,30 @@ class CycleData(Base):
     timestamp = Column(DateTime, default=datetime.now)
     
     document = relationship("Document", back_populates="cycles")
+
+class IDRReview(Base):
+    __tablename__ = 'idr_reviews'
+    
+    id = Column(Integer, primary_key=True)
+    doc_id = Column(Integer, ForeignKey('documents.id'))
+    reviewer_email = Column(String(255))
+    
+    review_hours = Column(Float, nullable=True)
+    major_tool = Column(Integer, default=0)
+    major_tech = Column(Integer, default=0)
+    major_std = Column(Integer, default=0)
+    minor_typo = Column(Integer, default=0)
+    
+    major_issues = Column(String(255), nullable=True)
+    minor_issues = Column(String(255), nullable=True)
+
+    comment_link = Column(String(255), nullable=True)
+    comments = Column(Text, nullable=True)
+    
+    status = Column(String(50), default="Pending") # Pending, Submitted
+    timestamp = Column(DateTime, nullable=True)
+    
+    document = relationship("Document", back_populates="idr_reviews")
 
 # Project Model
 class Project(Base):

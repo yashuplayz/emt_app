@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, g, session
 from database import SessionLocal, init_db
-from models import Document, CycleData, Project, Employee, User
+from models import Document, CycleData, Project, Employee, User, IDRReview
 from datetime import datetime
 import random
 import smtplib
@@ -123,9 +123,16 @@ def advance_workflow(doc, action, db):
             next_status = "Pending (IDR Review)"
             # Notify IDR Reviewers
             idr_emails = (doc.idr_reviewers or "").split(',')
+            # Create IDR Review records
             for email in idr_emails:
                 if email.strip():
+                    # Check if exists
+                    existing = db.query(IDRReview).filter_by(doc_id=doc.id, reviewer_email=email.strip()).first()
+                    if not existing:
+                        new_review = IDRReview(doc_id=doc.id, reviewer_email=email.strip())
+                        db.add(new_review)
                     send_email(email.strip(), f"IDR Required: {doc.request_id}", "IDR Review pending.")
+            db.commit()
         else:
             print("DEBUG: IDR Condition NOT Met. Proceeding to Reviewer Cycle.")
             # Originator -> Reviewer (Simply +1)
@@ -166,7 +173,13 @@ def advance_workflow(doc, action, db):
                 idr_emails = (doc.idr_reviewers or "").split(',')
                 for email in idr_emails:
                     if email.strip():
+                        # Check if exists
+                        existing = db.query(IDRReview).filter_by(doc_id=doc.id, reviewer_email=email.strip()).first()
+                        if not existing:
+                            new_review = IDRReview(doc_id=doc.id, reviewer_email=email.strip())
+                            db.add(new_review)
                         send_email(email.strip(), f"IDR Required: {doc.request_id}", "IDR Review pending.")
+                db.commit()
             
             # Step B: Check SignOff
             elif doc.is_signoff_required == "Yes":
@@ -185,17 +198,24 @@ def advance_workflow(doc, action, db):
     # --- IDR STAGE (7) ---
     elif current_stage_code == 7:
         print("DEBUG: Processing IDR Stage")
-        # IDR always accepts (based on user prompt logic implied, or just moves forward)
-        if doc.is_signoff_required == "Yes":
-            next_stage_code = 8
-            next_stage_name = "SignOffEngineer"
-            next_status = "Pending (SignOff Engineer)"
-            send_email(doc.signoff_eng, f"SignOff Required: {doc.request_id}", "SignOff pending.")
+        # Check if ALL IDR reviewers have submitted
+        pending_reviews = db.query(IDRReview).filter(IDRReview.doc_id == doc.id, IDRReview.status != "Submitted").count()
+        
+        if pending_reviews == 0:
+            print("DEBUG: All IDR Reviews Submitted. Moving to Next Stage.")
+            if doc.is_signoff_required == "Yes":
+                next_stage_code = 8
+                next_stage_name = "SignOffEngineer"
+                next_status = "Pending (SignOff Engineer)"
+                send_email(doc.signoff_eng, f"SignOff Required: {doc.request_id}", "SignOff pending.")
+            else:
+                next_stage_code = 99
+                next_stage_name = "Completed"
+                next_status = "Completed"
+                send_email(doc.doc_owner, f"Completed: {doc.request_id}", "Document workflow completed.")
         else:
-            next_stage_code = 99
-            next_stage_name = "Completed"
-            next_status = "Completed"
-            send_email(doc.doc_owner, f"Completed: {doc.request_id}", "Document workflow completed.")
+            print(f"DEBUG: {pending_reviews} IDR Reviews still pending. Staying in Stage 7.")
+            return # Do not update stage yet
 
     # --- SIGNOFF STAGE (8) ---
     elif current_stage_code == 8:
@@ -314,10 +334,12 @@ def view_doc(doc_id):
     employees = db.query(Employee).filter(Employee.status == 'Active').all()
     projects = db.query(Project).all()
 
+    idr_reviews = db.query(IDRReview).filter(IDRReview.doc_id == doc.id).all()
+
     if request.headers.get('HX-Request'):
-        return render_template('document_modal.html', doc=doc, cycles=cycles_dict, current_user=session.get('user_email'))
+        return render_template('document_modal.html', doc=doc, cycles=cycles_dict, current_user=session.get('user_email'), idr_reviews=idr_reviews)
     else:
-        return render_template('document.html', mode='edit', doc=doc, cycles=cycles_dict, current_user=session.get('user_email'), employees=employees, projects=projects)
+        return render_template('document.html', mode='edit', doc=doc, cycles=cycles_dict, current_user=session.get('user_email'), employees=employees, projects=projects, idr_reviews=idr_reviews)
 
 @app.route('/submit_cycle/<int:doc_id>/<stage>', methods=['POST'])
 @login_required
@@ -344,7 +366,43 @@ def submit_cycle(doc_id, stage):
     # if required_email and user_email != required_email:
     #     return "Unauthorized", 403
 
-    # Save Cycle Data
+    # IDR Special Handling
+    if stage == "IDR_Review":
+        # Find the review for this user
+        review = db.query(IDRReview).filter(
+            IDRReview.doc_id == doc.id, 
+            IDRReview.reviewer_email == user_email
+        ).first()
+        
+        if review:
+            review.review_hours = float(request.form.get('review_hours') or 0)
+            # Legacy fields (keep as 0 or map if needed, but we use new string fields now)
+            review.major_tool = int(request.form.get('major_tool') or 0)
+            review.major_tech = int(request.form.get('major_tech') or 0)
+            review.major_std = int(request.form.get('major_std') or 0)
+            review.minor_typo = int(request.form.get('minor_typo') or 0)
+            
+            # New String Fields
+            review.major_issues = request.form.get('major_issues')
+            review.minor_issues = request.form.get('minor_issues')
+            
+            review.comment_link = request.form.get('comment_link')
+            review.comments = request.form.get('comments')
+            review.status = "Submitted"
+            review.timestamp = datetime.now()
+            db.commit()
+            
+            # Try to advance workflow
+            advance_workflow(doc, "Accepted", db)
+        else:
+            flash("Error: You are not an assigned IDR reviewer for this document.")
+            
+        cycles_dict = {c.stage_name: c for c in doc.cycles}
+        # Also pass idr_reviews
+        idr_reviews = db.query(IDRReview).filter(IDRReview.doc_id == doc.id).all()
+        return render_template('document_modal.html', doc=doc, cycles=cycles_dict, current_user=session.get('user_email'), idr_reviews=idr_reviews)
+
+    # Save Cycle Data (For non-IDR stages)
     data = CycleData(
         doc_id=doc.id,
         stage_name=stage,
@@ -372,7 +430,8 @@ def submit_cycle(doc_id, stage):
     db.commit()
     
     cycles_dict = {c.stage_name: c for c in doc.cycles}
-    return render_template('document_modal.html', doc=doc, cycles=cycles_dict, current_user=session.get('user_email'))
+    idr_reviews = db.query(IDRReview).filter(IDRReview.doc_id == doc.id).all()
+    return render_template('document_modal.html', doc=doc, cycles=cycles_dict, current_user=session.get('user_email'), idr_reviews=idr_reviews)
 
 @app.route('/delete/<int:doc_id>')
 @login_required
