@@ -571,27 +571,86 @@
                 data-bs-parent="#modalAccordion">
                 <div class="accordion-body">
                     <form action="/submit_cycle/{{doc.id}}/SignOffEngineer" method="POST">
-                        {% set data = cycles['SignOffEngineer'] if 'SignOffEngineer' in cycles else
-                        None %}
-                        {% set is_editable = (doc.current_stage_code == 8 and current_user ==
-                        doc.signoff_eng)
-                        %}
+                        {% set data = cycles['SignOffEngineer'] if 'SignOffEngineer' in cycles else None %}
+                        {% set is_editable = (doc.current_stage_code == 8 and current_user == doc.signoff_eng) %}
+
+                        <!-- Summary Table -->
+                        <div class="table-responsive mb-4">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Document</th>
+                                        <th>Cycle_1</th>
+                                        <th>Cycle_2</th>
+                                        <th>Cycle_3</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Originator's Document Link</td>
+                                        <td>
+                                            {% if 'OriginatorCycle_1' in cycles and cycles['OriginatorCycle_1'].ref_link
+                                            %}
+                                            <a href="{{ cycles['OriginatorCycle_1'].ref_link }}" target="_blank">Click
+                                                here</a>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if 'OriginatorCycle_2' in cycles and cycles['OriginatorCycle_2'].ref_link
+                                            %}
+                                            <a href="{{ cycles['OriginatorCycle_2'].ref_link }}" target="_blank">Click
+                                                here</a>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if 'OriginatorCycle_3' in cycles and cycles['OriginatorCycle_3'].ref_link
+                                            %}
+                                            <a href="{{ cycles['OriginatorCycle_3'].ref_link }}" target="_blank">Click
+                                                here</a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Reviewer's Document Link</td>
+                                        <td>
+                                            <!-- Reviewer Link Placeholder for Cycle 1 -->
+                                        </td>
+                                        <td>
+                                            <!-- Reviewer Link Placeholder for Cycle 2 -->
+                                        </td>
+                                        <td>
+                                            <!-- Reviewer Link Placeholder for Cycle 3 -->
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">SignOff Decision</label>
-                                <select name="signoff_decision" class="form-select" {{ 'disabled' if not is_editable }}>
-                                    <option>Approved</option>
-                                    <option>Hold</option>
-                                </select>
+                                <label class="form-label">TimeStamp (Auto Update)</label>
+                                <input type="text" class="form-control"
+                                    value="{{ data.timestamp.strftime('%m/%d/%Y') if data else 'mm/dd/yyyy' }}"
+                                    disabled>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">SignOff Hours</label>
-                                <input type="number" step="0.1" name="signoff_hours" class="form-control"
-                                    value="{{ data.signoff_hours if data }}" {{ 'disabled' if not is_editable }}>
+                                <label class="form-label">SignOff Engineer Decision</label>
+                                <select name="signoff_decision" class="form-select" {{ 'disabled' if not is_editable }}>
+                                    <option value="" selected disabled>Nothing selected</option>
+                                    <option value="Approved" {{ 'selected' if data and data.signoff_decision=='Approved'
+                                        }}>Approved</option>
+                                    <option value="Hold" {{ 'selected' if data and data.signoff_decision=='Hold' }}>Hold
+                                    </option>
+                                </select>
                             </div>
                             <div class="col-md-12">
-                                <label class="form-label">Comments</label>
+                                <label class="form-label">Spent Hours</label>
+                                <input type="number" step="0.1" name="signoff_hours" class="form-control"
+                                    placeholder="Enter Spent Hours" value="{{ data.signoff_hours if data }}"
+                                    {{ 'disabled' if not is_editable }}>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">SignOff Engineer Comments</label>
                                 <textarea name="signoff_comments" class="form-control" rows="3" {{ 'disabled' if not
                                     is_editable }}>{{ data.signoff_comments if data }}</textarea>
                             </div>
