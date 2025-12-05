@@ -248,14 +248,25 @@ def index():
     # Filter documents where the current user is involved
     print(f"DEBUG: Current User Email: '{user_email}'")
     
-    docs = db.query(Document).filter(
+    query = db.query(Document).filter(
         Document.record_status == "Active",
         (Document.doc_owner == user_email) | 
         (Document.originator == user_email) | 
         (Document.reviewer.like(f"%{user_email}%")) | 
         (Document.idr_reviewers.like(f"%{user_email}%")) |
         (Document.signoff_eng == user_email)
-    ).all()
+    )
+
+    filter_type = request.args.get('filter')
+    if filter_type == 'completed':
+        query = query.filter(Document.current_status == 'Completed')
+    elif filter_type == 'all':
+        pass # Show all records
+    else:
+        # Default: Show only ongoing (not completed)
+        query = query.filter(Document.current_status != 'Completed')
+
+    docs = query.all()
     
     print(f"DEBUG: Found {len(docs)} documents for user {user_email}")
     for d in docs:

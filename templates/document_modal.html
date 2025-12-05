@@ -185,6 +185,11 @@
                                         }}></div>
                             </div>
                             <div class="col-md-12">
+                                <label class="form-label">Document Link</label>
+                                <input type="text" name="ref_link" class="form-control"
+                                    value="{{ data.ref_link if data }}" {{ 'disabled' if not is_editable }}>
+                            </div>
+                            <div class="col-md-12">
                                 <label class="form-label">Reviewer Comments</label>
                                 <textarea name="description" class="form-control" rows="3" {{ 'disabled' if not
                                     is_editable }}>{{ data.description if data }}</textarea>
@@ -281,6 +286,11 @@
                                 <label class="form-label">Review Hours</label>
                                 <input type="number" step="0.1" name="review_hours" class="form-control"
                                     value="{{ data.review_hours if data }}" {{ 'disabled' if not is_editable }}>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Document Link</label>
+                                <input type="text" name="ref_link" class="form-control"
+                                    value="{{ data.ref_link if data }}" {{ 'disabled' if not is_editable }}>
                             </div>
                         </div>
                         <div class="row g-3">
@@ -403,6 +413,11 @@
                                 <label class="form-label">Review Hours</label>
                                 <input type="number" step="0.1" name="review_hours" class="form-control"
                                     value="{{ data.review_hours if data }}" {{ 'disabled' if not is_editable }}>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Document Link</label>
+                                <input type="text" name="ref_link" class="form-control"
+                                    value="{{ data.ref_link if data }}" {{ 'disabled' if not is_editable }}>
                             </div>
                         </div>
                         <div class="row g-3">
@@ -613,13 +628,22 @@
                                     <tr>
                                         <td>Reviewer's Document Link</td>
                                         <td>
-                                            <!-- Reviewer Link Placeholder for Cycle 1 -->
+                                            {% if 'ReviewerCycle_1' in cycles and cycles['ReviewerCycle_1'].ref_link %}
+                                            <a href="{{ cycles['ReviewerCycle_1'].ref_link }}" target="_blank">Click
+                                                here</a>
+                                            {% endif %}
                                         </td>
                                         <td>
-                                            <!-- Reviewer Link Placeholder for Cycle 2 -->
+                                            {% if 'ReviewerCycle_2' in cycles and cycles['ReviewerCycle_2'].ref_link %}
+                                            <a href="{{ cycles['ReviewerCycle_2'].ref_link }}" target="_blank">Click
+                                                here</a>
+                                            {% endif %}
                                         </td>
                                         <td>
-                                            <!-- Reviewer Link Placeholder for Cycle 3 -->
+                                            {% if 'ReviewerCycle_3' in cycles and cycles['ReviewerCycle_3'].ref_link %}
+                                            <a href="{{ cycles['ReviewerCycle_3'].ref_link }}" target="_blank">Click
+                                                here</a>
+                                            {% endif %}
                                         </td>
                                     </tr>
                                 </tbody>

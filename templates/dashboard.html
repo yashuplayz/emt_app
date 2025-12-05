@@ -4,18 +4,18 @@
 <div class="card mb-3 border-0 shadow-sm">
     <div class="card-body p-3 d-flex align-items-center gap-3">
         <a href="/new" class="btn btn-outline-danger btn-bg ">+ New</a>
-        <button class="btn btn-outline-danger btn-bg">Refresh</button>
-        <button class="btn btn-outline-danger btn-bg">All Records</button>
-        <button class="btn btn-outline-danger btn-bg">My Records</button>
-        <input type="text" class="form-control form-control-sm ms-auto border-danger" placeholder="Search"
-            style="max-width: 250px;">
+        <button class="btn btn-outline-danger btn-bg" onclick="window.location.reload()">Refresh</button>
+        <a href="/?filter=all" class="btn btn-outline-danger btn-bg">All Records</a>
+        <a href="/?filter=completed" class="btn btn-outline-danger btn-bg">Completed Records</a>
+        <input type="text" id="searchInput" class="form-control form-control-sm ms-auto border-danger"
+            placeholder="Search" style="max-width: 250px;" onkeyup="filterTable()">
     </div>
 </div>
 
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="custom-table">
+            <table class="custom-table" id="docsTable">
                 <thead>
                     <tr>
                         <th>SNO</th>
@@ -66,9 +66,41 @@
                         </td>
                     </tr>
                     {% endfor %}
+                    <tr id="noDataRow" style="display: none;">
+                        <td colspan="13" class="text-center text-muted py-3">No data found</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<script>
+    function filterTable() {
+        const input = document.getElementById("searchInput");
+        const filter = input.value.toLowerCase();
+        const table = document.getElementById("docsTable");
+        const tr = table.getElementsByTagName("tr");
+        let hasVisible = false;
+
+        // Start from 1 to skip header
+        for (let i = 1; i < tr.length; i++) {
+            // Skip the "No data found" row itself from being filtered
+            if (tr[i].id === "noDataRow") continue;
+
+            let rowText = tr[i].textContent.toLowerCase();
+            if (rowText.includes(filter)) {
+                tr[i].style.display = "";
+                hasVisible = true;
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+
+        const noDataRow = document.getElementById("noDataRow");
+        if (noDataRow) {
+            noDataRow.style.display = hasVisible ? "none" : "table-row";
+        }
+    }
+</script>
 {% endblock %}
